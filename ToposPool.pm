@@ -1,9 +1,11 @@
 # vim: set sw=2 ts=2 expandtab :
 #
-# ToposPool Version 1.1
+# ToposPool Version 1.2
 #
 # Version history:
 #
+#   1.2          Die in case a new pool name cannot be determined
+#                  (contributed by John van Dam)
 #   1.1          Added tokens_as_text and token_list functions
 #   1.0          First released version
 #
@@ -31,7 +33,7 @@ sub new {
   $self -> {'user_agent'} = new LWP::UserAgent();
 
   # set the agent name
-  $self -> {'user_agent'} -> agent ('PerlTopos/1.0');
+  $self -> {'user_agent'} -> agent ('PerlTopos/1.2');
 
   if (defined $name) {
     # open a pool with a given name
@@ -50,7 +52,13 @@ sub new {
 
       # get the name by taking all word characters before the last
       # trailing slash (if present)
-      ($self -> {'name'}) = ($url =~ m/(\w+)\/?$/);
+      if ($url =~ m/(\w+)\/?$/) {
+        $self -> {'name'} = $1;
+      }
+      else {
+        die("Unable to retrieve a Topos pool name from the request; " .
+            "check the connection.");
+      }
     }
   }
   return $self;
