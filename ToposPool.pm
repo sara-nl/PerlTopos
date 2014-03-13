@@ -134,7 +134,7 @@ sub save {
 # delete the token pool
 sub delete {
   my $self = shift;  
-  my $url  = $self -> url . "/tokens";
+  my $url  = $self -> url . "/tokens/";
   my $request = new HTTP::Request (DELETE => $url);
 
   my $response = $self -> {'user_agent'} -> request($request);
