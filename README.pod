@@ -1,0 +1,201 @@
+=head1 Topos Perl Client
+
+The Topos Perl Client provides an object-oriented interface to Perl scripts
+for accessing Token pools and storing and retrieving pool tokens.
+
+=head1 Typical Topos client usage
+
+A client will typically open an existing pool, download tokens until there
+are no more tokens, and process each token. This is done with the
+following scriptlet:
+
+    ...
+
+    # open the exisiting pool with name $name
+    my $pool = new TokenPool ($pool_name);
+    
+    # download tokens, processing each token;
+    # set the lock timeout to 100s
+    while (my $token = $pool -> next_token(100)) {
+
+      # check if the token is a file to be processed, otherwise skip
+      next unless $token -> is_file;
+
+      # get the file name
+      my $filename = $token -> filename;
+
+      # execute the command to process this file
+      system("./process_file $filename");
+
+      # commands to store the results somewhere
+      ... 
+
+      # remove the file from the file system
+      unlink ($filename);
+
+      # delete the token
+      $token -> delete;
+    }
+
+=head2 Creating a ToposPool object
+
+There are two ways to create a ToposPool object:
+
+=over 2
+
+=item * by creating a new token pool on the token server; 
+
+=item * by opening an existing token pool.
+
+
+=back
+
+=head3 Creating a new token pool
+
+A new token pool with no tokens can be created and opened with:
+
+  my $pool = new TokenPool;
+
+The returned object is a TokenPool object.
+ 
+
+=head3 Saving the name of a pool to a file
+
+To store the token pool name to a file, for example after creating a new
+pool and filling it with tokens, use the "save" member function. The "save"
+member function has an optional file name, which is "pool_id.txt" by default.
+
+  $pool -> save;
+
+or
+
+  $pool -> save("pool1.txt");
+
+
+=head3 Opening an existing pool
+
+Existing pools can be opened either by specifying the pool name, or by
+reading the pool name from a file.
+
+Opening the pool by specifying the name uses the new method:
+
+  my $pool = new TokenPool ("12ab45cd.....");
+
+Loading the pool from a file:
+
+  my $pool = load TokenPool;  # loads from pool_id.txt
+
+or 
+
+  my $pool = load TokenPool ("pool1.txt");
+
+
+=head2 Creating a text token
+
+Text tokens can be created into the pool with the "create_token"
+member function:
+
+  $pool -> create_token ($text);
+
+
+=head2 Creating a file token
+
+File tokens can be created using the "upload_file_as_token" member function:
+
+  $pool -> upload_file_as_token ($filename);
+
+The file name can indicate a relative or absolute path. The path itself
+is never stored in the token, only the file name.
+
+
+=head2 Getting the next token
+
+
+  my $token = $pool -> next_token;
+
+The member function next_token returns a ToposToken object, which
+can contain text or a file. See below how to determine the type and to
+get the contents of the token.
+
+If there are no more available tokens, the next_token function returns undef.
+This makes this function suitable for while-constructs:
+
+  while (my $token = $pool -> next_token) {
+    ...
+  }
+
+The type of the token can be determined with the is_file function of
+the token:
+
+  if ($token -> is_file) {
+    ...
+  }
+
+=head3 Getting a text token
+
+If the file is a text token, the content of the token can be retrieved with
+the token member function "content".
+
+  my $content = $token -> content;
+
+If the token contains a file, content returns the file contents (not the
+file name).
+
+=head3 Getting a file token
+
+If a token contains a file, the contents of the file 
+are saved to a file with the original file name.
+
+As a security measure, the save member function always
+stores the file in the current directory, regardless of the path used when
+uploading the file.
+
+The token member function 'filename' returns the file name.
+
+  my $filename = $token -> filename
+
+
+=head3 Getting the next token with a lock timeout
+
+The next_token member function has one optional parameter, the lock
+timeout in seconds.
+
+  my $token = $pool -> next_token (180); # timeout of 3 minutes
+
+If the lock timeout is omitted, the token is not locked.
+
+=head3 Renewing locks on tokens
+
+Locks can be renewed using the token 'renew_lock' member function:
+
+  my $token = $pool -> next_token(180); # 3 minutes
+
+  while (...) {
+    # still running?
+    $token -> renew_lock(240); # 4 minutes
+  }
+
+The renew_lock function has one optional parameter, the new lock timeout
+value. If no lock timeout value is specified, renew_lock uses the same
+timeout value as the last lock.
+
+=head2 Deleting tokens
+
+Tokens are deleted using the token method "delete":
+
+  my $token = $pool -> next_token;
+  ...
+  $token -> delete;
+
+
+=head2 Deleting the pool
+
+Pools can be deleted using the pool method "delete", deleting all tokens in
+that pool:
+
+  my $pool = load TokenPool();
+  ...
+  $pool -> delete;
+
+
+=head1 VERSION 1.0
